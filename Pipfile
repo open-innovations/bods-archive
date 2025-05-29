@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 gtfs-realtime-bindings = "*"
 pandas = "*"
+colorama = "*"
 
 [dev-packages]
 
