@@ -19,7 +19,7 @@ The timetable data for each region (in GTFS format) can be downloaded using `scr
 
 `${BODSARCHIVE}/timetables/YYYY/MM/DD/itm_REGION_NAME_gtfs_YYMMDD.zip`
 
-This script can be run from as a cronjob once a day. Edit cron with:
+This script can be run as a cronjob once a day. Edit cron with:
 
 ```
 crontab -e
