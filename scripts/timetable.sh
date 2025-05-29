@@ -3,7 +3,7 @@ regions=('yorkshire' 'west_midlands' 'wales' 'south_west' 'south_east' 'scotland
 
 for i in "${regions[@]}"; do
   url="https://data.bus-data.dft.gov.uk/timetable/download/gtfs-file/$i/"
-  file="timetables/$(date +"%Y")/$(date +"%m")/$(date +"%d")/itm_"$i"_gtfs_$(date +"%Y%m%d").zip"
+  file="${BODSARCHIVE}/timetables/$(date +"%Y")/$(date +"%m")/$(date +"%d")/itm_"$i"_gtfs_$(date +"%Y%m%d").zip"
   if [[ -e "$file" ]]; then
     echo "file exists"
   else 
