@@ -6,83 +6,83 @@ from datetime import datetime, timedelta
 from gtfs_realtime_utils import get_gtfs_entities_from_directory
 
 def entities_to_dataframe(entities, round=5):
-        '''
-        Converts a list of entities into a dataframe
-        
-        Params
-        ------
-        entities: list
-            a list of gtfsrt entities
+    '''
+    Converts a list of entities into a dataframe
+    
+    Params
+    ------
+    entities: list
+        a list of gtfsrt entities
 
-        round: int
-            number of dp to round coordinates
+    round: int
+        number of dp to round coordinates
 
-        Returns
-        -------
-        df: pandas.DataFrame
-            The resulting dataframe
-        '''
-        records = []
+    Returns
+    -------
+    df: pandas.DataFrame
+        The resulting dataframe
+    '''
+    records = []
 
-        print(f"There are {Fore.YELLOW}{len(entities)}{Style.RESET_ALL} entities (bus location reports).")
+    print(f"There are {Fore.YELLOW}{len(entities)}{Style.RESET_ALL} entities (bus location reports).")
 
-        for e in entities:
-            v = e.vehicle
-            records.append({
-                "trip_id": v.trip.trip_id,
-                "start_time": v.trip.start_time,
-                "start_date": v.trip.start_date,
-                "schedule_relationship": v.trip.schedule_relationship,
-                "route_id": v.trip.route_id,
-                "latitude": v.position.latitude,
-                "longitude": v.position.longitude,
-                "bearing": int(v.position.bearing),
-                "stop_sequence": v.current_stop_sequence,
-                "status": v.current_status,
-                "timestamp": v.timestamp,
-                "vehicle_id": v.vehicle.id,
-            })
+    for e in entities:
+        v = e.vehicle
+        records.append({
+            "trip_id": v.trip.trip_id,
+            "start_time": v.trip.start_time,
+            "start_date": v.trip.start_date,
+            "schedule_relationship": v.trip.schedule_relationship,
+            "route_id": v.trip.route_id,
+            "latitude": v.position.latitude,
+            "longitude": v.position.longitude,
+            "bearing": int(v.position.bearing),
+            "stop_sequence": v.current_stop_sequence,
+            "status": v.current_status,
+            "timestamp": v.timestamp,
+            "vehicle_id": v.vehicle.id,
+        })
 
-        df = pd.DataFrame(records)
+    df = pd.DataFrame(records)
 
-        # Optionally round coordinates
-        if round:
-            df['longitude'] = df['longitude'].round(round)
-            df['latitude'] = df['latitude'].round(round)
+    # Optionally round coordinates
+    if round:
+        df['longitude'] = df['longitude'].round(round)
+        df['latitude'] = df['latitude'].round(round)
 
-        return df
+    return df
 
 def remove_duplicate_reports(df, subset=['timestamp', 'vehicle_id', 'trip_id', 'longitude', 'latitude'], sortby=['timestamp', 'vehicle_id', 'trip_id']):
-        '''
-        Removes duplicate data and sorts the resulting dataframe. Prints the fraction of data that was duplicated.
+    '''
+    Removes duplicate data and sorts the resulting dataframe. Prints the fraction of data that was duplicated.
 
-        Params
-        ------
-        df: pandas.DataFrame
+    Params
+    ------
+    df: pandas.DataFrame
 
-        subset: list
-            list of column names to use when checking for duplicates
-        
-        sortby: list
-            columns to sort the final frame by
+    subset: list
+        list of column names to use when checking for duplicates
+    
+    sortby: list
+        columns to sort the final frame by
 
-        Returns
-        -------
-        df: pandas.DataFrame
-            Deduplicated dataframe
-        '''
-        with_duplicates = len(df) # Count the length of the raw dataframe
+    Returns
+    -------
+    df: pandas.DataFrame
+        Deduplicated dataframe
+    '''
+    with_duplicates = len(df) # Count the length of the raw dataframe
 
-        df.drop_duplicates(subset=subset, keep='first', inplace=True) # The first/last here shouldn't matter as one of the duplicate fields is timestamp. So these are data points that are for the same point in time too.
-        
-        without_duplicates = len(df) # Count the length of the de-duplicated dataframe
-        
-        fraction_duplicated = round((1 - without_duplicates/with_duplicates)*100, 4)
-        
-        print(f"Fraction of data that was duplicated in 'longitude', 'latitude', 'timestamp', 'vehicle_id', 'trip_id':{Fore.YELLOW}{fraction_duplicated}%{Style.RESET_ALL}")
+    df.drop_duplicates(subset=subset, keep='first', inplace=True) # The first/last here shouldn't matter as one of the duplicate fields is timestamp. So these are data points that are for the same point in time too.
+    
+    without_duplicates = len(df) # Count the length of the de-duplicated dataframe
+    
+    fraction_duplicated = round((1 - without_duplicates/with_duplicates)*100, 4)
+    
+    print(f"Fraction of data that was duplicated in 'longitude', 'latitude', 'timestamp', 'vehicle_id', 'trip_id':{Fore.YELLOW}{fraction_duplicated}%{Style.RESET_ALL}")
 
-        df.sort_values(by=sortby, ascending=True, inplace=True)
-        return df
+    df.sort_values(by=sortby, ascending=True, inplace=True)
+    return df
 
 def set_args():
     '''Set the arguments given in the command line'''
