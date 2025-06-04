@@ -7,6 +7,9 @@ name = "pypi"
 gtfs-realtime-bindings = "*"
 pandas = "*"
 colorama = "*"
+jupyter = "*"
+notebook = "*"
+ipykernel = "*"
 
 [dev-packages]
 
