@@ -2,12 +2,6 @@
 
 At Open Innovations we like buses. We like Bus Open Data. We want to be able to archive Bus Open Data. This is our prototype for creating an archive of [BODS data](https://www.bus-data.dft.gov.uk/).
 
-Before starting to create an archive you should set an environment variable:
-
-```bash
-export BODSARCHIVE=/path/to/archive
-```
-
 You should also ensure you have a `python` environment set up for this project. To make managing that easier, we use [`pipenv`](https://pipenv.pypa.io/en/latest/). If you don't already have pipenv installed, you can do so by running:
 
 ```bash
@@ -24,41 +18,54 @@ This will install all the necessary packages and ensure the correct versions. Yo
 
 ## Running the archive tools
 
-The archive is made up of several subtasks.
+### Automatically
 
-### Timetable data
-
-The timetable data for each region (in GTFS format) can be downloaded using `scripts/timetable.sh`. This will save the files in:
-
-`${BODSARCHIVE}/timetables/YYYY/MM/DD/itm_REGION_NAME_gtfs_YYMMDD.zip`
-
-This script can be run as a cronjob once a day. Edit cron with:
+The archive is made up of several subtasks. Both should be set up using a cronjob. Edit the crontab using:
 
 ```bash
 crontab -e
 ```
-
-Add a cronjob:
-
+Then add the following:
 ```bash
+BODSARCHIVE=/path/to/archive
 30 02 * * * /path/to/scripts/timetable.sh
+* * * * * /path/to/scripts/archive.sh
 ```
 
 This will download the timetables at 2:30am each day. Note that these tend to take up roughly 1.3GB per day.
 
+The archive script will download two files per minute.
+
+### Manually
+
+If you want to run the scripts manually, you should set an environment variable:
+
+```bash
+export BODSARCHIVE=/path/to/archive
+```
+
+### Timetable data
+
+The timetable data for each region (in GTFS format) can be downloaded by running `scripts/timetable.sh`. This will save the files in:
+
+`${BODSARCHIVE}/timetables/YYYY/MM/DD/itm_REGION_NAME_gtfs_YYMMDD.zip`
+
+
 ### Real-time data
 
-The real time data for each region is downloaded every 30 seconds using `scripts/archive.sh`. This saves files of the form:
+The real time data for each region is downloaded by running `scripts/archive.sh`. This saves files of the form:
 
 * `${BODSARCHIVE}/sirivm/YYYY/MM/DD/sirivm-YYYYMMDDTHHMMSS.zip`
 * `${BODSARCHIVE}/gtfsrt/YYYY/MM/DD/gtfsrt-YYYYMMDDTHHMMSS.zip`
 
+Running this will save two files for both gtfsrt and sirivm, 30s apart. This is because we use the same script for cronjob (see above).
+
 ### Building the CSV downloads
 
-To make the outputs easier to use in a variety of situations we create simplified CSV versions of the real-time data using:
+To make the outputs easier to use in a variety of situations we create simplified (de-duplicated and rounded) CSV versions of the real-time data using:
 
 ```bash
-python scripts/python/gtfsrt_to_csv.py
+pipenv run python scripts/python/gtfsrt_to_csv.py
 ```
 
 This will look for all the GTFS-RT zip files from yesterday and output a zipped CSV file in:
