@@ -138,3 +138,13 @@ sub humanBytes {
 	if($bytes > 1e3){ return sprintf("%0.1f kB",$bytes/1e3); }
 	return $bytes;
 }
+
+sub addCommas {
+	my $a = shift;
+	my $b = reverse $a;               # $b = '87654321';
+	my @c = unpack("(A3)*", $b);      # $c = ('876', '543', '21');
+	my $d = join ',', @c;             # $d = '876,543,21';
+	my $e = reverse $d;
+	return $e;
+}
+
