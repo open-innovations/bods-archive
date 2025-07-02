@@ -6,6 +6,6 @@ for i in "${regions[@]}"; do
   if [[ -e "$file" ]]; then
     echo "file exists"
   else 
-    curl "$url" -s --create-dirs -o "$file"
+    curl "$url" -s --create-dirs -o "$file" && chmod 0755 "$file"
   fi
 done
