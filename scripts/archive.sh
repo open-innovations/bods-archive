@@ -15,6 +15,7 @@ do
 		dir="${BODSARCHIVE}/${types[$j]}/$dtdir"
 		if [ ! -d "$dir" ]; then
 			# Create directory and set permissions
+			echo -e "Making \e[36m$dir\e[0m"
 			mkdir -p $dir
 			chmod 755 $dir
 		fi
