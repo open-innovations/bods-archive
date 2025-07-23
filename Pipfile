@@ -4,15 +4,18 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-gtfs-realtime-bindings = "*"
 pandas = "*"
-colorama = "*"
+requests = "*"
+bs4 = "*"
 jupyter = "*"
 notebook = "*"
+colorama = "*"
+gtfs-realtime-bindings = "*"
 ipykernel = "*"
-bs4 = "*"
+matplotlib = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.12.3"
+python_version = "3.12"
+python_full_version = "3.12.3"
