@@ -122,5 +122,5 @@ class OperatorPerformance():
 
         self.cleanup()
     
-# if __name__ == "__main__":
-#     OperatorPerformance().run(region='yorkshire', date='20250729')
+if __name__ == "__main__":
+    OperatorPerformance().run(date='20250817')
