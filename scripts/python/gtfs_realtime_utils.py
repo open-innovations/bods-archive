@@ -1,12 +1,13 @@
 import glob
 from zipfile import ZipFile
 from google.transit import gtfs_realtime_pb2
+from colorama import Fore, Style
 import time
 
 
 def log_num_files_parsed(i, total, t1):
     if i % 100 == 0:
-        print(f"Parsed {round(i*100 / total)}% of {total} files in {round(time.time() - t1)} seconds.")
+        print(f"Parsed {Fore.YELLOW}{round(i*100 / total)}%{Style.RESET_ALL} of {Fore.YELLOW}{total}{Style.RESET_ALL} gtfsrt binary files in {Fore.YELLOW}{round(time.time() - t1)}{Style.RESET_ALL} seconds.")
 
 def get_gtfs_from_binaries(paths: list):
     entities = []
