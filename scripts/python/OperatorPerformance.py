@@ -6,6 +6,7 @@ from datetime import datetime
 from zipfile import ZipFile
 import sys
 import argparse
+from datetime import timedelta
 
 # from utils import ROOT, TEMPDIR, DIRS_DICT
 from scripts.python.utils import Fore, Style
@@ -36,7 +37,7 @@ class OperatorPerformance():
             argparse.Namespace: Parsed command-line arguments.
         """
         parser = argparse.ArgumentParser()
-        parser.add_argument("-d", "--date", required=True, help="Date string format 'YYYYmmdd'")
+        parser.add_argument("-d", "--date", required=False, help="Date string format 'YYYYmmdd'")
         args = parser.parse_args()
         return args
     
@@ -183,7 +184,7 @@ class OperatorPerformance():
 
     def run(self, regions=['north_east', 'north_west', 'yorkshire', 'east_anglia', 'east_midlands', 'west_midlands', 'south_east', 'south_west']):
         # Set all the dates we need from cmdline args
-        date = self.args.date
+        date = self.args.date if self.args.date else (datetime.now() - timedelta(days=1))
         self.set_dates(date)
         
         # Unzip the downloads to temporary directory
