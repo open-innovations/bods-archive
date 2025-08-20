@@ -1,9 +1,8 @@
 import glob
-from zipfile import ZipFile
+from zipfile import ZipFile, BadZipFile
 from google.transit import gtfs_realtime_pb2
 from colorama import Fore, Style
 import time
-
 
 def log_num_files_parsed(i, total, t1):
     if i % 100 == 0:
@@ -44,14 +43,17 @@ def get_gtfs_entities_from_zips(paths:list, bin_file='gtfsrt.bin'):
     
     for i, path in enumerate(paths, 1):
         if path.endswith(".zip"):
-            with ZipFile(path) as zf:
-                if bin_file in zf.namelist():
-                    with zf.open(bin_file, 'r') as f:
-                        feed = gtfs_realtime_pb2.FeedMessage()
-                        feed.ParseFromString(f.read())
-                        entities.extend(feed.entity)
-                else:
-                    print(f'{bin_file} is not contained within {path}. Skipping to next zip file.')
+            try:
+                with ZipFile(path) as zf:
+                    if bin_file in zf.namelist():
+                        with zf.open(bin_file, 'r') as f:
+                            feed = gtfs_realtime_pb2.FeedMessage()
+                            feed.ParseFromString(f.read())
+                            entities.extend(feed.entity)
+                    else:
+                        print(f'{bin_file} is not contained within {path}. Skipping to next zip file.')
+            except BadZipFile:
+                print(f"{path} is probably a corrupted download. Skipping")
         else:
             print(f"{path} is not a zip file.")
         log_num_files_parsed(i, total, t1)
