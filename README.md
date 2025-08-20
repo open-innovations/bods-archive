@@ -93,6 +93,24 @@ If the output file already exists you can force it to overwrite it using the `--
 pipenv run python scripts/python/gtfsrt_to_csv.py --date "2025/05/29" --force
 ```
 
+### BulkDownloader.py
+
+Download entire days from the archive.
+
+```python
+pipenv run python scripts/python/BulkDownloader.py
+```
+
+### OperatorPerformance.py
+
+See how well bus operators report their journeys in BODS
+
+```python
+pipenv run python scripts/python/OperatorPerformance.py -d "yyyymmdd"
+```
+
+Pre-requisites: Use BulkDownloader.py to get the archive files for a given day as a zip.
+
 ### Archive Downloader Script
 
 #### Overview
