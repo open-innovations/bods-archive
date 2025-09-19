@@ -6,7 +6,7 @@ from time import time
 
 def log_num_files_parsed(i, total, t1):
     if i % 100 == 0:
-        print(f"Parsed {Fore.YELLOW}{round(i*100 / total)}%{Style.RESET_ALL} of {Fore.YELLOW}{total}{Style.RESET_ALL} gtfsrt binary files in {Fore.YELLOW}{round(time.time() - t1)}{Style.RESET_ALL} seconds.")
+        print(f"Parsed {Fore.YELLOW}{round(i*100 / total)}%{Style.RESET_ALL} of {Fore.YELLOW}{total}{Style.RESET_ALL} gtfsrt binary files in {Fore.YELLOW}{round(time() - t1)}{Style.RESET_ALL} seconds.")
 
 def get_gtfs_from_binaries(paths: list):
     entities = []
