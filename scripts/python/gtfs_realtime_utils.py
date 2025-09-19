@@ -3,10 +3,41 @@ from zipfile import ZipFile, BadZipFile
 from google.transit import gtfs_realtime_pb2
 from colorama import Fore, Style
 from time import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # def log_num_files_parsed(i, total, t1):
 #     if i % 100 == 0:
 #         print(f"Parsed {Fore.YELLOW}{round(i*100 / total)}%{Style.RESET_ALL} of {Fore.YELLOW}{total}{Style.RESET_ALL} gtfsrt binary files in {Fore.YELLOW}{round(time() - t1)}{Style.RESET_ALL} seconds.")
+def parse_single_gtfs_zip(path, bin_file='gtfsrt.bin'):
+    """
+    Parse a single GTFS-RT zip file and return the list of entities.
+    """
+    try:
+        with ZipFile(path) as zf:
+            if bin_file in zf.namelist():
+                with zf.open(bin_file) as f:
+                    feed = gtfs_realtime_pb2.FeedMessage()
+                    feed.ParseFromString(f.read())
+                    return list(feed.entity)
+            else:
+                print(f"{bin_file} not found in {path}. Skipping.")
+                return []
+    except BadZipFile:
+        print(f"Corrupted ZIP: {path}. Skipping.")
+        return []
+    except Exception as e:
+        print(f"Failed to parse {path}: {e}")
+        return []
+def yield_gtfs_entities_parallel(paths: list, bin_file: str = 'gtfsrt.bin', max_workers: int = 16):
+    """
+    Yield GTFS-RT entities from zip files in parallel.
+    """
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(parse_single_gtfs_zip, path, bin_file): path for path in paths}
+        for future in as_completed(futures):
+            entities = future.result()
+            if entities:
+                yield entities
 
 def log_file_progress(current_index, total, start_time):
     elapsed = time() - start_time

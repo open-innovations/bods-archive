@@ -10,7 +10,7 @@ from datetime import timedelta
 
 # from utils import ROOT, TEMPDIR, DIRS_DICT
 from scripts.python.utils import Fore, Style
-from scripts.python.gtfs_realtime_utils import get_gtfs_entities_from_directory, yield_gtfs_entities_per_file
+from scripts.python.gtfs_realtime_utils import *
 from scripts.python.gtfs_utils import GTFSTimetable
 
 class OperatorPerformance():
@@ -113,6 +113,8 @@ class OperatorPerformance():
             print("No GTFS-RT ZIP files found.")
             sys.exit(0)
 
+        print(f"Processing {len(paths)} GTFS-RT ZIPs with parallelism...")
+
         all_dfs = []
         getter = attrgetter(
             'vehicle.trip.trip_id',
@@ -121,7 +123,7 @@ class OperatorPerformance():
             'vehicle.timestamp'
         )
 
-        for entities in yield_gtfs_entities_per_file(paths):
+        for entities in yield_gtfs_entities_parallel(paths, max_workers=16):  # experiment with 8–32
             try:
                 mapped = list(map(getter, entities))
                 df = pd.DataFrame(mapped, columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
