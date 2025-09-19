@@ -10,7 +10,7 @@ from datetime import timedelta
 
 # from utils import ROOT, TEMPDIR, DIRS_DICT
 from scripts.python.utils import Fore, Style
-from scripts.python.gtfs_realtime_utils import get_gtfs_entities_from_directory, get_gtfs_batches
+from scripts.python.gtfs_realtime_utils import get_gtfs_entities_from_directory, yield_gtfs_entities_per_file
 from scripts.python.gtfs_utils import GTFSTimetable
 
 class OperatorPerformance():
@@ -102,90 +102,43 @@ class OperatorPerformance():
     #     self.df = df
     #     return df
 
-# def get_entities_as_df(self, batch_size: int = 1000):
-#     gtfs_dir = Path(self.TEMPDIR / "gtfsrt")
-#     if not gtfs_dir.exists():
-#         print("GTFS-RT directory not found. Run BulkDownloader first.")
-#         sys.exit(0)
-
-#     zip_paths = list(gtfs_dir.glob("*.zip"))
-#     if not zip_paths:
-#         print("No GTFS-RT zip files found.")
-#         sys.exit(0)
-
-#     print(f"Found {len(zip_paths)} ZIP files. Processing in batches of {batch_size}...")
-
-#     all_batches = []
-
-#     for entity_batch in get_gtfs_batches(zip_paths, batch_size=batch_size):
-#         getter = attrgetter(
-#             'vehicle.trip.trip_id',
-#             'vehicle.position.latitude',
-#             'vehicle.position.longitude',
-#             'vehicle.timestamp'
-#         )
-
-#         try:
-#             mapped_data = list(map(getter, entity_batch))
-#         except AttributeError as e:
-#             print(f"Skipping batch due to missing fields: {e}")
-#             continue
-
-#         df = pd.DataFrame(mapped_data, columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
-#         all_batches.append(df)
-
-#     if not all_batches:
-#         print("No valid data extracted.")
-#         return pd.DataFrame(columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
-
-#     final_df = pd.concat(all_batches, ignore_index=True)
-#     final_df.drop_duplicates(subset=['trip_id', 'latitude', 'longitude', 'timestamp'], inplace=True)
-
-#     print("Processed all batches, dropped duplicates.")
-#     self.df = final_df
-#     return final_df
-    def get_entities_as_df(self, batch_size: int = 1000):
+    def get_entities_as_df(self):
         gtfs_dir = Path(self.TEMPDIR / "gtfsrt")
         if not gtfs_dir.exists():
             print("GTFS-RT directory not found. Run BulkDownloader first.")
             sys.exit(0)
 
-        zip_paths = list(gtfs_dir.glob("*.zip"))
-        if not zip_paths:
-            print("No GTFS-RT zip files found.")
+        paths = list(gtfs_dir.glob("*.zip"))
+        if not paths:
+            print("No GTFS-RT ZIP files found.")
             sys.exit(0)
 
-        print(f"Found {len(zip_paths)} ZIP files. Processing in batches of {batch_size}...")
+        all_dfs = []
+        getter = attrgetter(
+            'vehicle.trip.trip_id',
+            'vehicle.position.latitude',
+            'vehicle.position.longitude',
+            'vehicle.timestamp'
+        )
 
-        all_batches = []
-
-        for entity_batch in get_gtfs_batches(zip_paths, batch_size=batch_size):
-            getter = attrgetter(
-                'vehicle.trip.trip_id',
-                'vehicle.position.latitude',
-                'vehicle.position.longitude',
-                'vehicle.timestamp'
-            )
-
+        for entities in yield_gtfs_entities_per_file(paths):
             try:
-                mapped_data = list(map(getter, entity_batch))
+                mapped = list(map(getter, entities))
+                df = pd.DataFrame(mapped, columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
+                all_dfs.append(df)
             except AttributeError as e:
-                print(f"Skipping batch due to missing fields: {e}")
+                print(f"Skipping one file due to missing fields: {e}")
                 continue
 
-            df = pd.DataFrame(mapped_data, columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
-            all_batches.append(df)
-
-        if not all_batches:
-            print("No valid data extracted.")
+        if not all_dfs:
+            print("No valid GTFS-RT data found.")
             return pd.DataFrame(columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
 
-        final_df = pd.concat(all_batches, ignore_index=True)
-        final_df.drop_duplicates(subset=['trip_id', 'latitude', 'longitude', 'timestamp'], inplace=True)
+        df_all = pd.concat(all_dfs, ignore_index=True)
+        df_all = df_all.drop_duplicates(subset=['trip_id', 'latitude', 'longitude', 'timestamp'])
 
-        print("Processed all batches, dropped duplicates.")
-        self.df = final_df
-        return final_df
+        self.df = df_all
+        return df_all
 
     def get_unique_trip_ids_as_list(self, df:pd.DataFrame):
         num_unique_ids_realtime = df.trip_id.nunique()

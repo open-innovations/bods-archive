@@ -66,16 +66,23 @@ from zipfile import ZipFile, BadZipFile
 from google.transit import gtfs_realtime_pb2
 from time import time
 
-def get_gtfs_batches(paths: list, batch_size: int = 1000, bin_file: str = 'gtfsrt.bin'):
+def yield_gtfs_entities_per_file(paths: list, bin_file: str = 'gtfsrt.bin'):
     """
-    Generator that yields batches of GTFS-RT entities as lists.
-    """
-    assert paths, "No ZIP paths provided."
-    batch = []
-    t1 = time()
+    Generator that yields GTFS-RT entities from each individual ZIP file in paths.
 
-    for i, path in enumerate(paths, 1):
-        if not path.name.endswith(".zip"):
+    Params
+    ------
+    paths : list of Path or str
+        Paths to ZIP files containing GTFS-RT binary data.
+    bin_file : str
+        The name of the binary GTFS-RT file inside each ZIP.
+    
+    Yields
+    ------
+    list of FeedEntity from one ZIP file.
+    """
+    for path in paths:
+        if not str(path).endswith(".zip"):
             print(f"Skipping non-zip file: {path}")
             continue
 
@@ -85,21 +92,11 @@ def get_gtfs_batches(paths: list, batch_size: int = 1000, bin_file: str = 'gtfsr
                     with zf.open(bin_file) as f:
                         feed = gtfs_realtime_pb2.FeedMessage()
                         feed.ParseFromString(f.read())
-                        for entity in feed.entity:
-                            batch.append(entity)
-                            if len(batch) >= batch_size:
-                                yield batch
-                                batch = []
-                        del feed
+                        yield feed.entity  # This is a list of FeedEntity
                 else:
                     print(f"{bin_file} not found in {path}. Skipping.")
         except BadZipFile:
             print(f"Corrupted ZIP: {path}. Skipping.")
-
-        log_file_progress(i, len(paths), t1)
-
-    if batch:
-        yield batch
 
 def get_gtfs_entities_from_directory(DIR: str):
     '''
