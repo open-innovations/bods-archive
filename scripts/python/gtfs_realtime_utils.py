@@ -28,16 +28,29 @@ def parse_single_gtfs_zip(path, bin_file='gtfsrt.bin'):
     except Exception as e:
         print(f"Failed to parse {path}: {e}")
         return []
-def yield_gtfs_entities_parallel(paths: list, bin_file: str = 'gtfsrt.bin', max_workers: int = 16):
+
+def yield_gtfs_entities_parallel(paths: list, bin_file: str = 'gtfsrt.bin', max_workers: int = 8):
     """
-    Yield GTFS-RT entities from zip files in parallel.
+    Yield GTFS-RT entities from zip files in parallel, with progress logging.
     """
+    total = len(paths)
+    start_time = time()
+
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(parse_single_gtfs_zip, path, bin_file): path for path in paths}
-        for future in as_completed(futures):
-            entities = future.result()
-            if entities:
-                yield entities
+
+        for i, future in enumerate(as_completed(futures), 1):
+            path = futures[future]
+            try:
+                entities = future.result()
+                if entities:
+                    yield entities
+            except Exception as e:
+                print(f"[{path}] Error during processing: {e}")
+
+            elapsed = time() - start_time
+            percent = (i / total) * 100
+            print(f"[{i}/{total}] Processed {path.name} ({percent:.1f}%) in {elapsed:.1f}s")
 
 def log_file_progress(current_index, total, start_time):
     elapsed = time() - start_time
