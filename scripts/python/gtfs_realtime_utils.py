@@ -2,7 +2,7 @@ import glob
 from zipfile import ZipFile, BadZipFile
 from google.transit import gtfs_realtime_pb2
 from colorama import Fore, Style
-import time
+from time import time
 
 def log_num_files_parsed(i, total, t1):
     if i % 100 == 0:
@@ -12,7 +12,7 @@ def get_gtfs_from_binaries(paths: list):
     entities = []
     total = len(paths)
     assert total > 0, "paths is empty."
-    t1 = time.time()
+    t1 = time()
 
     for i, path in enumerate(paths, 1):
         if path.endswith(".bin"):
@@ -36,27 +36,26 @@ def get_gtfs_entities_from_zips(paths:list, bin_file='gtfsrt.bin'):
     bin_file: str
         The name of the binary file you expect to find in each zip file.
     '''
+    assert paths, "paths is empty."
     entities = []
-    total = len(paths)
-    assert total > 0, "paths is empty."
-    t1 = time.time()
-    
+    t1 = time()
     for i, path in enumerate(paths, 1):
-        if path.endswith(".zip"):
-            try:
-                with ZipFile(path) as zf:
-                    if bin_file in zf.namelist():
-                        with zf.open(bin_file, 'r') as f:
-                            feed = gtfs_realtime_pb2.FeedMessage()
-                            feed.ParseFromString(f.read())
-                            entities.extend(feed.entity)
-                    else:
-                        print(f'{bin_file} is not contained within {path}. Skipping to next zip file.')
-            except BadZipFile:
-                print(f"{path} is probably a corrupted download. Skipping")
-        else:
+        if not path.endswith(".zip"):
             print(f"{path} is not a zip file.")
-        log_num_files_parsed(i, total, t1)
+            continue
+        try:
+            with ZipFile(path) as zf:
+                if bin_file in zf.namelist():
+                    with zf.open(bin_file) as f:
+                        feed = gtfs_realtime_pb2.FeedMessage()
+                        feed.ParseFromString(f.read())
+                        entities.extend(feed.entity)
+                        del feed
+                else:
+                    print(f'{bin_file} not in {path}. Skipping.')
+        except BadZipFile:
+            print(f"{path} is corrupted. Skipping.")
+        log_num_files_parsed(i, len(paths), t1)
     return entities
 
 def get_gtfs_entities_from_directory(DIR: str):
