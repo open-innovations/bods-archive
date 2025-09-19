@@ -10,7 +10,7 @@ from datetime import timedelta
 
 # from utils import ROOT, TEMPDIR, DIRS_DICT
 from scripts.python.utils import Fore, Style
-from scripts.python.gtfs_realtime_utils import get_gtfs_entities_from_directory
+from scripts.python.gtfs_realtime_utils import get_gtfs_entities_from_directory, get_gtfs_batches
 from scripts.python.gtfs_utils import GTFSTimetable
 
 class OperatorPerformance():
@@ -74,33 +74,118 @@ class OperatorPerformance():
                         print(f"Unzipped {Fore.YELLOW}{round(i*100 / total)}%{Style.RESET_ALL} of {Fore.YELLOW}{total}{Style.RESET_ALL} files into {Fore.GREEN}{out_path}{Style.RESET_ALL}")
                     i += 1
 
-    def get_entities_as_df(self):
-        if not (Path(self.TEMPDIR / "gtfsrt")).exists():
-            print("You don't appear to have the gtfsrt data for the date requested! You may need to extract them using BulkDownloader first.")
-            sys.exit(0)
-        entities = get_gtfs_entities_from_directory(str(Path(self.TEMPDIR / "gtfsrt")))
-        print("Got entities as a list")
-        #TODO add lat, long, timestamp here. then drop duplicates before we do any counting
-        # print(entities[0])
-        getter = attrgetter('vehicle.trip.trip_id', 'vehicle.position.latitude', 'vehicle.position.longitude', 'vehicle.timestamp')
-        mapped_data = list(map(getter, entities))
-        # print("mapped_data", mapped_data[0])
-        # print("trip_ids", trip_ids)
-        print("Got all records")
-        # Define column names corresponding to the attributes
-        column_names = ['trip_id', 'latitude', 'longitude', 'timestamp']
+    # def get_entities_as_df(self):
+    #     if not (Path(self.TEMPDIR / "gtfsrt")).exists():
+    #         print("You don't appear to have the gtfsrt data for the date requested! You may need to extract them using BulkDownloader first.")
+    #         sys.exit(0)
+    #     entities = get_gtfs_entities_from_directory(str(Path(self.TEMPDIR / "gtfsrt")))
+    #     print("Got entities as a list")
+    #     #TODO add lat, long, timestamp here. then drop duplicates before we do any counting
+    #     # print(entities[0])
+    #     getter = attrgetter('vehicle.trip.trip_id', 'vehicle.position.latitude', 'vehicle.position.longitude', 'vehicle.timestamp')
+    #     mapped_data = list(map(getter, entities))
+    #     # print("mapped_data", mapped_data[0])
+    #     # print("trip_ids", trip_ids)
+    #     print("Got all records")
+    #     # Define column names corresponding to the attributes
+    #     column_names = ['trip_id', 'latitude', 'longitude', 'timestamp']
 
-        # Create the DataFrame
-        df = pd.DataFrame(mapped_data, columns=column_names)
-        # df = pd.DataFrame(data={'trip_id': trip_ids})
-        # print(df.head().to_csv())
-        print("Added to df")
-        print("Dropping dupes")
-        # A duplicate is the same bus, at the same location, at the same time.
-        df = df.drop_duplicates(subset=['trip_id', 'latitude', 'longitude', 'timestamp'])
-        print("Dropped dupes")
-        self.df = df
-        return df
+    #     # Create the DataFrame
+    #     df = pd.DataFrame(mapped_data, columns=column_names)
+    #     # df = pd.DataFrame(data={'trip_id': trip_ids})
+    #     # print(df.head().to_csv())
+    #     print("Added to df")
+    #     print("Dropping dupes")
+    #     # A duplicate is the same bus, at the same location, at the same time.
+    #     df = df.drop_duplicates(subset=['trip_id', 'latitude', 'longitude', 'timestamp'])
+    #     print("Dropped dupes")
+    #     self.df = df
+    #     return df
+
+# def get_entities_as_df(self, batch_size: int = 1000):
+#     gtfs_dir = Path(self.TEMPDIR / "gtfsrt")
+#     if not gtfs_dir.exists():
+#         print("GTFS-RT directory not found. Run BulkDownloader first.")
+#         sys.exit(0)
+
+#     zip_paths = list(gtfs_dir.glob("*.zip"))
+#     if not zip_paths:
+#         print("No GTFS-RT zip files found.")
+#         sys.exit(0)
+
+#     print(f"Found {len(zip_paths)} ZIP files. Processing in batches of {batch_size}...")
+
+#     all_batches = []
+
+#     for entity_batch in get_gtfs_batches(zip_paths, batch_size=batch_size):
+#         getter = attrgetter(
+#             'vehicle.trip.trip_id',
+#             'vehicle.position.latitude',
+#             'vehicle.position.longitude',
+#             'vehicle.timestamp'
+#         )
+
+#         try:
+#             mapped_data = list(map(getter, entity_batch))
+#         except AttributeError as e:
+#             print(f"Skipping batch due to missing fields: {e}")
+#             continue
+
+#         df = pd.DataFrame(mapped_data, columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
+#         all_batches.append(df)
+
+#     if not all_batches:
+#         print("No valid data extracted.")
+#         return pd.DataFrame(columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
+
+#     final_df = pd.concat(all_batches, ignore_index=True)
+#     final_df.drop_duplicates(subset=['trip_id', 'latitude', 'longitude', 'timestamp'], inplace=True)
+
+#     print("Processed all batches, dropped duplicates.")
+#     self.df = final_df
+#     return final_df
+    def get_entities_as_df(self, batch_size: int = 1000):
+        gtfs_dir = Path(self.TEMPDIR / "gtfsrt")
+        if not gtfs_dir.exists():
+            print("GTFS-RT directory not found. Run BulkDownloader first.")
+            sys.exit(0)
+
+        zip_paths = list(gtfs_dir.glob("*.zip"))
+        if not zip_paths:
+            print("No GTFS-RT zip files found.")
+            sys.exit(0)
+
+        print(f"Found {len(zip_paths)} ZIP files. Processing in batches of {batch_size}...")
+
+        all_batches = []
+
+        for entity_batch in get_gtfs_batches(zip_paths, batch_size=batch_size):
+            getter = attrgetter(
+                'vehicle.trip.trip_id',
+                'vehicle.position.latitude',
+                'vehicle.position.longitude',
+                'vehicle.timestamp'
+            )
+
+            try:
+                mapped_data = list(map(getter, entity_batch))
+            except AttributeError as e:
+                print(f"Skipping batch due to missing fields: {e}")
+                continue
+
+            df = pd.DataFrame(mapped_data, columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
+            all_batches.append(df)
+
+        if not all_batches:
+            print("No valid data extracted.")
+            return pd.DataFrame(columns=['trip_id', 'latitude', 'longitude', 'timestamp'])
+
+        final_df = pd.concat(all_batches, ignore_index=True)
+        final_df.drop_duplicates(subset=['trip_id', 'latitude', 'longitude', 'timestamp'], inplace=True)
+
+        print("Processed all batches, dropped duplicates.")
+        self.df = final_df
+        return final_df
 
     def get_unique_trip_ids_as_list(self, df:pd.DataFrame):
         num_unique_ids_realtime = df.trip_id.nunique()
@@ -191,13 +276,8 @@ class OperatorPerformance():
         self.unzip_bulk_download()
 
         # Load the entities into a dataframe
-        realtime_df = self.get_entities_as_df()
+        realtime_df = self.get_entities_as_df(batch_size=1000)
 
-        # Get the trip_ids that appeared in the realtime data
-        # realtime_ids = self.get_unique_trip_ids_as_list(realtime_df)
-
-        # TODO ALSO add a count of unique trip_ids. Then we join to timetable. We then have a number of gps points per trip.
-        # TODO ADD total # gps points per operator. 
         for region in regions:
         
             # Load the timetable and filter down to given date

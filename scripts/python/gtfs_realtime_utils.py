@@ -25,39 +25,78 @@ def get_gtfs_from_binaries(paths: list):
         log_num_files_parsed(i, total, t1)
     return entities
 
-def get_gtfs_entities_from_zips(paths:list, bin_file='gtfsrt.bin'):
-    '''
-    Get the GTFS-RT entities, from a list of filepaths, as a list.
+# def get_gtfs_entities_from_zips(paths:list, bin_file='gtfsrt.bin'):
+#     '''
+#     Get the GTFS-RT entities, from a list of filepaths, as a list.
 
-    Params
-    ------
-    paths: list
-        A list of paths 
-    bin_file: str
-        The name of the binary file you expect to find in each zip file.
-    '''
-    assert paths, "paths is empty."
-    entities = []
+#     Params
+#     ------
+#     paths: list
+#         A list of paths 
+#     bin_file: str
+#         The name of the binary file you expect to find in each zip file.
+#     '''
+#     assert paths, "paths is empty."
+#     entities = []
+#     t1 = time()
+#     for i, path in enumerate(paths, 1):
+#         if not path.endswith(".zip"):
+#             print(f"{path} is not a zip file.")
+#             continue
+#         try:
+#             with ZipFile(path) as zf:
+#                 if bin_file in zf.namelist():
+#                     with zf.open(bin_file) as f:
+#                         feed = gtfs_realtime_pb2.FeedMessage()
+#                         feed.ParseFromString(f.read())
+#                         entities.extend(feed.entity)
+#                         del feed
+#                 else:
+#                     print(f'{bin_file} not in {path}. Skipping.')
+#         except BadZipFile:
+#             print(f"{path} is corrupted. Skipping.")
+#         log_num_files_parsed(i, len(paths), t1)
+#     return entities
+
+from zipfile import ZipFile, BadZipFile
+from google.transit import gtfs_realtime_pb2
+from time import time
+
+def get_gtfs_batches(paths: list, batch_size: int = 1000, bin_file: str = 'gtfsrt.bin'):
+    """
+    Generator that yields batches of GTFS-RT entities as lists.
+    """
+    assert paths, "No ZIP paths provided."
+    batch = []
     t1 = time()
+
     for i, path in enumerate(paths, 1):
-        if not path.endswith(".zip"):
-            print(f"{path} is not a zip file.")
+        if not path.name.endswith(".zip"):
+            print(f"Skipping non-zip file: {path}")
             continue
+
         try:
             with ZipFile(path) as zf:
                 if bin_file in zf.namelist():
                     with zf.open(bin_file) as f:
                         feed = gtfs_realtime_pb2.FeedMessage()
                         feed.ParseFromString(f.read())
-                        entities.extend(feed.entity)
+                        for entity in feed.entity:
+                            batch.append(entity)
+                            if len(batch) >= batch_size:
+                                yield batch
+                                batch = []
                         del feed
                 else:
-                    print(f'{bin_file} not in {path}. Skipping.')
+                    print(f"{bin_file} not found in {path}. Skipping.")
         except BadZipFile:
-            print(f"{path} is corrupted. Skipping.")
-        log_num_files_parsed(i, len(paths), t1)
-    return entities
+            print(f"Corrupted ZIP: {path}. Skipping.")
 
+        log_num_files_parsed(i, len(paths), t1)
+
+    if batch:
+        yield batch
+        
 def get_gtfs_entities_from_directory(DIR: str):
     '''
     Get the GTFS-RT entities, from a directory of zip files containing gtfsrt binary files, as a list.
