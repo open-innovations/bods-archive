@@ -229,7 +229,7 @@ class OperatorPerformance():
         self.unzip_bulk_download()
 
         # Load the entities into a dataframe
-        realtime_df = self.get_entities_as_df(batch_size=1000)
+        realtime_df = self.get_entities_as_df()
 
         for region in regions:
         
