@@ -4,9 +4,13 @@ from google.transit import gtfs_realtime_pb2
 from colorama import Fore, Style
 from time import time
 
-def log_num_files_parsed(i, total, t1):
-    if i % 100 == 0:
-        print(f"Parsed {Fore.YELLOW}{round(i*100 / total)}%{Style.RESET_ALL} of {Fore.YELLOW}{total}{Style.RESET_ALL} gtfsrt binary files in {Fore.YELLOW}{round(time() - t1)}{Style.RESET_ALL} seconds.")
+# def log_num_files_parsed(i, total, t1):
+#     if i % 100 == 0:
+#         print(f"Parsed {Fore.YELLOW}{round(i*100 / total)}%{Style.RESET_ALL} of {Fore.YELLOW}{total}{Style.RESET_ALL} gtfsrt binary files in {Fore.YELLOW}{round(time() - t1)}{Style.RESET_ALL} seconds.")
+
+def log_file_progress(current_index, total, start_time):
+    elapsed = time() - start_time
+    print(f"Processed file {current_index}/{total} in {elapsed:.1f}s")
 
 def get_gtfs_from_binaries(paths: list):
     entities = []
@@ -22,7 +26,7 @@ def get_gtfs_from_binaries(paths: list):
                 entities.extend(feed.entity)
         else:
             print(f"{path} is not a binary file.")
-        log_num_files_parsed(i, total, t1)
+        log_file_progress(i, total, t1)
     return entities
 
 # def get_gtfs_entities_from_zips(paths:list, bin_file='gtfsrt.bin'):
@@ -92,11 +96,11 @@ def get_gtfs_batches(paths: list, batch_size: int = 1000, bin_file: str = 'gtfsr
         except BadZipFile:
             print(f"Corrupted ZIP: {path}. Skipping.")
 
-        log_num_files_parsed(i, len(paths), t1)
+        log_file_progress(i, len(paths), t1)
 
     if batch:
         yield batch
-        
+
 def get_gtfs_entities_from_directory(DIR: str):
     '''
     Get the GTFS-RT entities, from a directory of zip files containing gtfsrt binary files, as a list.
@@ -106,4 +110,4 @@ def get_gtfs_entities_from_directory(DIR: str):
     DIR: str
         path to directory containing zip files. May also include other, non-zip files (these are ignored).
     '''
-    return get_gtfs_entities_from_zips(glob.glob(DIR + '/*.zip'))
+    return get_gtfs_batches(glob.glob(DIR + '/*.zip'))
