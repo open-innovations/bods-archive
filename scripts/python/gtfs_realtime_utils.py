@@ -81,7 +81,8 @@ def yield_gtfs_entities_per_file(paths: list, bin_file: str = 'gtfsrt.bin'):
     ------
     list of FeedEntity from one ZIP file.
     """
-    for path in paths:
+    t1 = time()
+    for i, path in enumerate(paths):
         if not str(path).endswith(".zip"):
             print(f"Skipping non-zip file: {path}")
             continue
@@ -97,6 +98,7 @@ def yield_gtfs_entities_per_file(paths: list, bin_file: str = 'gtfsrt.bin'):
                     print(f"{bin_file} not found in {path}. Skipping.")
         except BadZipFile:
             print(f"Corrupted ZIP: {path}. Skipping.")
+        log_file_progress(i, len(paths), t1)
 
 def get_gtfs_entities_from_directory(DIR: str):
     '''
