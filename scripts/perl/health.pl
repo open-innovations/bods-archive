@@ -16,7 +16,7 @@ use OpenInnovations::CalendarChart;
 require "lib.pl";
 
 
-my (@rows,$chart,$types,$type,$dir,@dirs,$d,$count,$webdir,$fh,$svg,$dt,$dt2,$file,$bytesh,$bytes,$df,$dayfile,$pattern,$dtiso,$today,$row,@files,$f,$total);
+my (@rows,$chart,$types,$type,$dir,@dirs,$d,$count,$webdir,$fh,$svg,$dt,$dt2,$file,$bytesh,$bytes,$df,$dayfile,$pattern,$dtiso,$today,$row,@files,$f,$total,$dirlink);
 
 $webdir = $ARGV[0]||"/var/www/data.datalibrary.uk/resources/images/";
 $types = {
@@ -86,6 +86,9 @@ foreach $type (sort(keys(%{$types}))){
 			if($count == 0 && -e $dayfile){
 				$count = `zipinfo $dayfile |grep ^-|wc -l`;
 				$count += 0;
+				$dirlink = "";
+			}else{
+				$dirlink = "<a href=\"$dt2/\">Directory</a>";
 			}
 			if(-e $dayfile){
 				# Get the bytes for this day's full zip
@@ -97,9 +100,12 @@ foreach $type (sort(keys(%{$types}))){
 			$bytesh = humanBytes($bytes);
 
 			# Build the row
-			$row = {'date'=>$dt,'files'=>$count,'value'=>addCommas($count),'bytes'=>$bytes,'byteshuman'=>$bytesh,'links'=>"<a href=\"$dt2/\">Directory</a>"};
+			$row = {'date'=>$dt,'files'=>$count,'value'=>addCommas($count),'bytes'=>$bytes,'byteshuman'=>$bytesh,'links'=>''};
+			if($dirlink){
+				$row->{'links'} = $dirlink;
+			}
 			if(-e $dayfile && $dtiso lt $today){
-				$row->{'links'} .= "\n<a href=\"$dt2/$type-$dtiso.zip\">Download day</a> (<span class=\"size\">{{ byteshuman }}</span>)";
+				$row->{'links'} .= ($row->{'links'} ? "\n":"")."<a href=\"$dt2/$type-$dtiso.zip\">Download day</a> (<span class=\"size\">{{ byteshuman }}</span>)";
 			}
 
 			# Add to the rows for the calendar chart
