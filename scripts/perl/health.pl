@@ -16,16 +16,17 @@ use OpenInnovations::CalendarChart;
 require "lib.pl";
 
 
-my (@rows,$chart,$types,$type,$dir,@dirs,$d,$count,$webdir,$fh,$svg,$dt,$dt2,$file,$bytesh,$bytes,$df,$dayfile,$pattern,$dtiso,$today,$row);
+my (@rows,$chart,$types,$type,$dir,@dirs,$d,$count,$webdir,$fh,$svg,$dt,$dt2,$file,$bytesh,$bytes,$df,$dayfile,$pattern,$dtiso,$today,$row,@files,$f,$total);
 
 $webdir = $ARGV[0]||"/var/www/data.datalibrary.uk/resources/images/";
 $types = {
-	'gtfsrt'=>{},
-	'sirivm'=>{},
+	'gtfsrt'=>{'keep_days'=>60},
+	'sirivm'=>{'keep_days'=>60},
 	'timetables'=>{'filepattern'=>'*_gtfs_[0-9]*.zip'}
 };
 
 $today = $dt = strftime("%Y%m%d", gmtime());
+
 
 $df = `df -B1 /`;
 if($df =~ /([0-9]+)[\t\s]([0-9]+)[\t\s]([0-9]+)[\s\t]+[0-9\.]+\% \/[\n\r]/s){
@@ -40,6 +41,8 @@ foreach $type (sort(keys(%{$types}))){
 	@rows = ();
 	msg("Type: <green>$type<none>\n");
 	$dir = $ENV{'BODSARCHIVE'}.($ENV{'BODSARCHIVE'} =~ /\/$/ ? '':'/').$type;
+
+	if(defined($types->{$type}{'keep_days'})){ $types->{$type}{'recent'} = strftime("%Y%m%d", gmtime(time - 86400*$types->{$type}{'keep_days'})); }
 
 	# Save total size
 	$bytes = `du -sb $dir`;
@@ -71,9 +74,19 @@ foreach $type (sort(keys(%{$types}))){
 			}
 
 			# Count the number of zip files (but not including the daily one)
-			$count = `find $pattern | wc -l`;
+			$count = `find $pattern 2> /dev/null | wc -l`;
 			$count =~ s/(^[\n\r]|[\n\r]$)//sg;
 
+			if($count > 0){
+				if($types->{$type}{'recent'} && $dtiso lt $types->{$type}{'recent'}){
+					msg("Removing $pattern ($count)\n");
+					`rm $pattern`;
+				}
+			}
+			if($count == 0 && -e $dayfile){
+				$count = `zipinfo $dayfile |grep ^-|wc -l`;
+				$count += 0;
+			}
 			if(-e $dayfile){
 				# Get the bytes for this day's full zip
 				$bytes = `du -sb $dayfile`;
