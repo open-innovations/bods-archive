@@ -68,11 +68,16 @@ class GTFSRT2Parquet:
         batch = []
         futures = []
 
-        with ZipFile(zip_path) as zf, ThreadPoolExecutor() as ex:
+        with ZipFile(zip_path) as zf, ThreadPoolExecutor(max_workers=12) as ex:
             for info in zf.infolist():
                 with zf.open(info) as subzip_bytes:
-                    with ZipFile(subzip_bytes) as subzf:
-                        data = subzf.read("gtfsrt.bin")
+                    try:
+                        with ZipFile(subzip_bytes) as subzf:
+                            data = subzf.read("gtfsrt.bin")
+                    except Exception as e:
+                        print(f"Failed with exception: {e}")
+                        print(f"Skipping: {subzip_bytes}")
+                        continue
 
                 futures.append(ex.submit(self.parse_member, data))
 
