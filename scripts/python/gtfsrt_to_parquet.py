@@ -36,7 +36,7 @@ class GTFSRT2Parquet:
         ]
         return SCHEMA
     
-    def parse_member(member_bytes):
+    def parse_member(self, member_bytes):
         """parse an individual gtsfrt binary file"""
         feed = gtfs_realtime_pb2.FeedMessage()
         feed.ParseFromString(member_bytes)
@@ -129,4 +129,4 @@ class GTFSRT2Parquet:
         self.clean_up()
 
 if __name__ == "__main__":
-    GTFSRT2Parquet.run(date=None)
+    GTFSRT2Parquet().run(date=None)
