@@ -123,7 +123,7 @@ class GTFSRT2Parquet:
         if not date:
             zip_file_date = self.setup_yesterday()
             print(f"Zipfile date: {zip_file_date}")
-        stream = self.stream_gtfsrt(zip_path=self.BODS_ARCHIVE_DIR / f"gtfsrt/{self.yesterday.year}/{str(self.yesterday.month).zfill(2)}/{str(self.yesterday.day).zfill(2)}" / f"gtsfrt-{zip_file_date}.zip")
+        stream = self.stream_gtfsrt(zip_path=self.BODS_ARCHIVE_DIR / f"gtfsrt/{self.yesterday.year}/{str(self.yesterday.month).zfill(2)}/{str(self.yesterday.day).zfill(2)}" / f"gtfsrt-{zip_file_date}.zip")
         self.write_dataset(stream=stream, temp_dir=self.ROOT / "tmp")
         self.read_and_combine()
         self.clean_up()
