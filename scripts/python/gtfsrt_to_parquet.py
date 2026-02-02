@@ -98,7 +98,9 @@ class GTFSRT2Parquet:
         self.temp_dir.mkdir(exist_ok=True, parents=True)
         print(f"Saving to {self.temp_dir}")
         for i, df in enumerate(stream):
-            df.write_parquet(f"{self.temp_dir}/part-{i:06d}.parquet")
+            pth = f"{self.temp_dir}/part-{i:06d}.parquet"
+            df.write_parquet(pth)
+            print(f"Wrote to {pth}")
     
     def read_and_combine(self):
         df = pl.scan_parquet(self.temp_dir / "*.parquet")
