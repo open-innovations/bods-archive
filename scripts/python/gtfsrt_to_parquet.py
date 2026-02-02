@@ -13,7 +13,7 @@ class GTFSRT2Parquet:
         self.gtfsrt_schema = self.get_schema()
         self.ROOT = Path.cwd()
         load_dotenv()
-        self.BODS_ARCHIVE_DIR = os.environ.get("BODSARCHIVE")
+        self.BODS_ARCHIVE_DIR = Path(os.environ.get("BODSARCHIVE"))
         pass
 
     def setup_yesterday(self):
