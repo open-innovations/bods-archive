@@ -124,6 +124,8 @@ class GTFSRT2Parquet:
 
     def clean_up(self):
         if self.passing:
+            for f in self.temp_dir.glob("*.parquet"):
+                f.unlink()
             self.temp_dir.rmdir()
 
     def run(self, date=None):
