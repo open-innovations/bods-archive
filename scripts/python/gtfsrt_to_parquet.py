@@ -107,7 +107,7 @@ class GTFSRT2Parquet:
             df.write_parquet(pth)
             print(f"Wrote to {pth}")
     
-    def read_and_combine(self):
+    def read_and_combine(self, deduplicate):
         df = pl.scan_parquet(self.temp_dir / "*.parquet")
 
         colnames = df.collect_schema().names()
@@ -115,9 +115,11 @@ class GTFSRT2Parquet:
             pl.col("lat").round(5).alias("lat"),
             pl.col("lon").round(5).alias("lon")
         )
-        df = df.unique(subset=[col for col in colnames if col not in ("entity_id", "bearing")])
+        if deduplicate:
+            df = df.unique(subset=[col for col in colnames if col not in ("entity_id", "bearing")])
+        
         df = df.collect()
-        outpath = self.BODS_ARCHIVE_DIR / f"gtfsrt/{self.yesterday.year}/{str(self.yesterday.month).zfill(2)}/{str(self.yesterday.day).zfill(2)}/all_bus_locations_deduplicated.parquet"
+        outpath = self.given_day_data_dir / "all_bus_locations_deduplicated.parquet"
         print(f"Writing to {outpath}")
         df.write_parquet(outpath)
         self.passing = True
@@ -128,13 +130,30 @@ class GTFSRT2Parquet:
                 f.unlink()
             self.temp_dir.rmdir()
 
-    def run(self, date=None):
+    def run(self, date=None, deduplicate=True):
+        """
+        Convert a day's worth of GTFSRT files from the BODS Archive to parquet.
+
+        :param date: A string for a specific date in iso format.
+        :param deduplicate: Whether or not to deduplicate the bus data on the columns:
+        "trip_id", "route_id", "start_date", "start_time", "lat", "lon", "timestamp", "vehicle_id".
+        """
         if not date:
             zip_file_date = self.setup_yesterday()
-            print(f"Zipfile date: {zip_file_date}")
-        stream = self.stream_gtfsrt(zip_path=self.BODS_ARCHIVE_DIR / f"gtfsrt/{self.yesterday.year}/{str(self.yesterday.month).zfill(2)}/{str(self.yesterday.day).zfill(2)}" / f"gtfsrt-{zip_file_date}.zip")
+            self.year = self.yesterday.year
+            self.month = self.yesterday.month
+            self.day = self.yesterday.day
+        else:
+            dt = datetime.fromisoformat(date)
+            zip_file_date = dt.strftime("%Y%m%d")
+            self.year = dt.year
+            self.month = dt.month
+            self.day = dt.day
+        print(f"Zipfile date: {zip_file_date}")
+        self.given_day_data_dir = self.BODS_ARCHIVE_DIR / f"gtfsrt/{self.year}/{str(self.month).zfill(2)}/{str(self.day).zfill(2)}"
+        stream = self.stream_gtfsrt(zip_path=self.given_day_data_dir / f"gtfsrt-{zip_file_date}.zip")
         self.write_dataset(stream=stream, temp_dir=self.ROOT / "tmp")
-        self.read_and_combine()
+        self.read_and_combine(deduplicate=deduplicate)
         self.clean_up()
 
 if __name__ == "__main__":
