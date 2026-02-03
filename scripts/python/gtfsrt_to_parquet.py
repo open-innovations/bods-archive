@@ -119,7 +119,7 @@ class GTFSRT2Parquet:
             df = df.unique(subset=[col for col in colnames if col not in ("entity_id", "bearing")])
         
         df = df.collect()
-        outpath = self.given_day_data_dir / "all_bus_locations_deduplicated.parquet"
+        outpath = self.given_day_data_dir / f"all_bus_locations_deduplicated_{self.zip_file_date}.parquet"
         print(f"Writing to {outpath}")
         df.write_parquet(outpath)
         self.passing = True
@@ -139,19 +139,19 @@ class GTFSRT2Parquet:
         "trip_id", "route_id", "start_date", "start_time", "lat", "lon", "timestamp", "vehicle_id".
         """
         if not date:
-            zip_file_date = self.setup_yesterday()
+            self.zip_file_date = self.setup_yesterday()
             self.year = self.yesterday.year
             self.month = self.yesterday.month
             self.day = self.yesterday.day
         else:
             dt = datetime.fromisoformat(date)
-            zip_file_date = dt.strftime("%Y%m%d")
+            self.zip_file_date = dt.strftime("%Y%m%d")
             self.year = dt.year
             self.month = dt.month
             self.day = dt.day
-        print(f"Zipfile date: {zip_file_date}")
+        print(f"Zipfile date: {self.zip_file_date}")
         self.given_day_data_dir = self.BODS_ARCHIVE_DIR / f"gtfsrt/{self.year}/{str(self.month).zfill(2)}/{str(self.day).zfill(2)}"
-        stream = self.stream_gtfsrt(zip_path=self.given_day_data_dir / f"gtfsrt-{zip_file_date}.zip")
+        stream = self.stream_gtfsrt(zip_path=self.given_day_data_dir / f"gtfsrt-{self.zip_file_date}.zip")
         self.write_dataset(stream=stream, temp_dir=self.ROOT / "tmp")
         self.read_and_combine(deduplicate=deduplicate)
         self.clean_up()
