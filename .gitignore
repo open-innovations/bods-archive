@@ -6,3 +6,8 @@ commands.txt
 notes.txt
 temp
 .env
+*.csv
+*.duckdb
+*.tmp
+*.txt
+*.parquet
