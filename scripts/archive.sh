@@ -20,7 +20,7 @@ do
 			chmod 755 $dir
 		fi
 		# Download file
-		curl "${urls[$j]}" -s --create-dirs -o "$dir/${types[$j]}-$(TZ=UTC date +"%Y%m%dT%H%M%S.zip")" && chmod 0755 "${_}";
+		curl "${urls[$j]}" -s --location --create-dirs -o "$dir/${types[$j]}-$(TZ=UTC date +"%Y%m%dT%H%M%S.zip")" && chmod 0755 "${_}";
 	done
 	# Get end time
 	end=`date +%s`
