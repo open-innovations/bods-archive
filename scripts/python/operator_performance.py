@@ -7,8 +7,6 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import pandas as pd
-
-# from utils import ROOT, TEMPDIR, DIRS_DICT
 from colorama import Fore, Style
 
 from scripts.python.gtfs_realtime_utils import get_gtfs_entities_from_directory

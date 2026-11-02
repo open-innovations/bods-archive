@@ -1,12 +1,17 @@
 import glob
-from zipfile import ZipFile, BadZipFile
-from google.transit import gtfs_realtime_pb2
-from colorama import Fore, Style
 from time import time
+from zipfile import BadZipFile, ZipFile
+
+from colorama import Fore, Style
+from google.transit import gtfs_realtime_pb2
+
 
 def log_num_files_parsed(i, total, t1):
     if i % 100 == 0:
-        print(f"Parsed {Fore.YELLOW}{round(i*100 / total)}%{Style.RESET_ALL} of {Fore.YELLOW}{total}{Style.RESET_ALL} gtfsrt binary files in {Fore.YELLOW}{round(time() - t1)}{Style.RESET_ALL} seconds.")
+        print(
+            f"Parsed {Fore.YELLOW}{round(i * 100 / total)}%{Style.RESET_ALL} of {Fore.YELLOW}{total}{Style.RESET_ALL} gtfsrt binary files in {Fore.YELLOW}{round(time() - t1)}{Style.RESET_ALL} seconds."
+        )
+
 
 def get_gtfs_from_binaries(paths: list):
     entities = []
@@ -16,7 +21,7 @@ def get_gtfs_from_binaries(paths: list):
 
     for i, path in enumerate(paths, 1):
         if path.endswith(".bin"):
-            with open(path, 'rb') as f:
+            with open(path, "rb") as f:
                 feed = gtfs_realtime_pb2.FeedMessage()
                 feed.ParseFromString(f.read())
                 entities.extend(feed.entity)
@@ -25,17 +30,18 @@ def get_gtfs_from_binaries(paths: list):
         log_num_files_parsed(i, total, t1)
     return entities
 
-def get_gtfs_entities_from_zips(paths:list, bin_file='gtfsrt.bin'):
-    '''
+
+def get_gtfs_entities_from_zips(paths: list, bin_file="gtfsrt.bin"):
+    """
     Get the GTFS-RT entities, from a list of filepaths, as a list.
 
     Params
     ------
     paths: list
-        A list of paths 
+        A list of paths
     bin_file: str
         The name of the binary file you expect to find in each zip file.
-    '''
+    """
     assert paths, "paths is empty."
     entities = []
     t1 = time()
@@ -52,19 +58,20 @@ def get_gtfs_entities_from_zips(paths:list, bin_file='gtfsrt.bin'):
                         entities.extend(feed.entity)
                         del feed
                 else:
-                    print(f'{bin_file} not in {path}. Skipping.')
+                    print(f"{bin_file} not in {path}. Skipping.")
         except BadZipFile:
             print(f"{path} is corrupted. Skipping.")
         log_num_files_parsed(i, len(paths), t1)
     return entities
 
+
 def get_gtfs_entities_from_directory(DIR: str):
-    '''
+    """
     Get the GTFS-RT entities, from a directory of zip files containing gtfsrt binary files, as a list.
 
     Params
     ------
     DIR: str
         path to directory containing zip files. May also include other, non-zip files (these are ignored).
-    '''
-    return get_gtfs_entities_from_zips(glob.glob(DIR + '/*.zip'))
+    """
+    return get_gtfs_entities_from_zips(glob.glob(DIR + "/*.zip"))

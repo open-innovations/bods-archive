@@ -1,12 +1,14 @@
-from zipfile import ZipFile
-from concurrent.futures import ThreadPoolExecutor
-from google.transit import gtfs_realtime_pb2
-import polars as pl
 import gc
-from pathlib import Path
 import os
-from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from pathlib import Path
+from zipfile import BadZipFile, ZipFile
+
+import polars as pl
+from dotenv import load_dotenv
+from google.transit import gtfs_realtime_pb2
+
 
 class GTFSRT2Parquet:
     def __init__(self):
@@ -14,7 +16,6 @@ class GTFSRT2Parquet:
         self.ROOT = Path.cwd()
         load_dotenv()
         self.BODS_ARCHIVE_DIR = Path(os.environ.get("BODSARCHIVE"))
-        pass
 
     def setup_yesterday(self):
         self.yesterday = datetime.now() - timedelta(days=1)
@@ -35,7 +36,7 @@ class GTFSRT2Parquet:
             "vehicle_id",
         ]
         return SCHEMA
-    
+
     def parse_member(self, member_bytes):
         """parse an individual gtsfrt binary file"""
         feed = gtfs_realtime_pb2.FeedMessage()
@@ -49,18 +50,20 @@ class GTFSRT2Parquet:
             v = ent.vehicle
             pos = v.position
 
-            out.append((
-                ent.id,
-                v.trip.trip_id,
-                v.trip.route_id,
-                v.trip.start_date,
-                v.trip.start_time,
-                round(pos.latitude, 5),
-                round(pos.longitude, 5),
-                pos.bearing,
-                v.timestamp,
-                v.vehicle.id,
-            ))
+            out.append(
+                (
+                    ent.id,
+                    v.trip.trip_id,
+                    v.trip.route_id,
+                    v.trip.start_date,
+                    v.trip.start_time,
+                    round(pos.latitude, 5),
+                    round(pos.longitude, 5),
+                    pos.bearing,
+                    v.timestamp,
+                    v.vehicle.id,
+                )
+            )
         return out
 
     def stream_gtfsrt(self, zip_path, batch_size=10000):
@@ -74,7 +77,7 @@ class GTFSRT2Parquet:
                     try:
                         with ZipFile(subzip_bytes) as subzf:
                             data = subzf.read("gtfsrt.bin")
-                    except Exception as e:
+                    except BadZipFile as e:
                         print(f"Failed with exception: {e}")
                         print(f"Skipping: {subzip_bytes}")
                         continue
@@ -98,30 +101,34 @@ class GTFSRT2Parquet:
             if batch:
                 yield pl.DataFrame(batch, orient="row", schema=self.gtfsrt_schema)
 
-    def write_dataset(self, stream:pl.DataFrame, temp_dir:Path):
+    def write_dataset(self, stream: pl.DataFrame, temp_dir: Path):
         self.temp_dir = temp_dir
         self.temp_dir.mkdir(exist_ok=True, parents=True)
         print(f"Saving to {self.temp_dir}")
         for i, df in enumerate(stream):
             pth = f"{self.temp_dir}/part-{i:06d}.parquet"
-            df.write_parquet(pth)
+            df.write_parquet(pth, compression="zstd")
             print(f"Wrote to {pth}")
-    
+
     def read_and_combine(self, deduplicate):
         df = pl.scan_parquet(self.temp_dir / "*.parquet")
 
         colnames = df.collect_schema().names()
         df = df.with_columns(
-            pl.col("lat").round(5).alias("lat"),
-            pl.col("lon").round(5).alias("lon")
+            pl.col("lat").round(5).alias("lat"), pl.col("lon").round(5).alias("lon")
         )
         if deduplicate:
-            df = df.unique(subset=[col for col in colnames if col not in ("entity_id", "bearing")])
-        
+            df = df.unique(
+                subset=[col for col in colnames if col not in ("entity_id", "bearing")]
+            )
+
         df = df.collect()
-        outpath = self.given_day_data_dir / f"all_bus_locations_deduplicated_{self.zip_file_date}.parquet"
+        outpath = (
+            self.given_day_data_dir
+            / f"all_bus_locations_deduplicated_{self.zip_file_date}.parquet"
+        )
         print(f"Writing to {outpath}")
-        df.write_parquet(outpath)
+        df.write_parquet(outpath, compression="zstd")
         self.passing = True
 
     def clean_up(self):
@@ -150,11 +157,17 @@ class GTFSRT2Parquet:
             self.month = dt.month
             self.day = dt.day
         print(f"Zipfile date: {self.zip_file_date}")
-        self.given_day_data_dir = self.BODS_ARCHIVE_DIR / f"gtfsrt/{self.year}/{str(self.month).zfill(2)}/{str(self.day).zfill(2)}"
-        stream = self.stream_gtfsrt(zip_path=self.given_day_data_dir / f"gtfsrt-{self.zip_file_date}.zip")
+        self.given_day_data_dir = (
+            self.BODS_ARCHIVE_DIR
+            / f"gtfsrt/{self.year}/{str(self.month).zfill(2)}/{str(self.day).zfill(2)}"
+        )
+        stream = self.stream_gtfsrt(
+            zip_path=self.given_day_data_dir / f"gtfsrt-{self.zip_file_date}.zip"
+        )
         self.write_dataset(stream=stream, temp_dir=self.ROOT / "tmp")
         self.read_and_combine(deduplicate=deduplicate)
         self.clean_up()
+
 
 if __name__ == "__main__":
     GTFSRT2Parquet().run(date=None)
