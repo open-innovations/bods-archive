@@ -3,12 +3,13 @@
 
 import glob
 import os
-import re
 import shutil
 import sys
 import zipfile
-from datetime import UTC, date, datetime, timedelta, timezone
-from html import escape
+from datetime import UTC, datetime, timedelta
+
+from calendar_chart import calendar_chart
+from messages import msg
 
 ARCHIVE = os.environ["BODSARCHIVE"].rstrip("/")
 WEBDIR = (
@@ -50,56 +51,22 @@ def write(path, text):
         fh.write(text)
 
 
-def calendar_svg(rows, value_key, tooltip):
-    """Minimal calendar heatmap: one block per year (newest first), weeks across, Mon-Sun down."""
-    cell, label, year_h = 12, 40, 7 * 12 + 16
-    top = max((r[value_key] for r in rows), default=0) or 1
-    years = sorted({r["date"][:4] for r in rows}, reverse=True)
-    parts = []
-    for i, year in enumerate(years):
-        y0 = i * year_h
-        offset = date(int(year), 1, 1).weekday()
-        parts.append(
-            f'<text x="0" y="{y0 + 10}" font-size="10" font-family="sans-serif">{year}</text>'
-        )
-        for r in (r for r in rows if r["date"].startswith(year)):
-            d = date.fromisoformat(r["date"])
-            week = (d.timetuple().tm_yday - 1 + offset) // 7
-            v = r[value_key]
-            fill = (
-                f'fill="#1a9850" fill-opacity="{0.15 + 0.85 * v / top:.2f}"'
-                if v
-                else 'fill="#ddd"'
-            )
-            text = d.strftime(tooltip)
-            for _ in range(2):  # twice, because {{ links }} contains {{ byteshuman }}
-                text = re.sub(r"\{\{ (\w+) \}\}", lambda m: str(r.get(m[1], "")), text)
-            text = escape(re.sub(r"<[^>]+>", "", text))
-            parts.append(
-                f'<rect x="{label + week * cell}" y="{y0 + d.weekday() * cell}" '
-                f'width="{cell - 2}" height="{cell - 2}" {fill}><title>{text}</title></rect>'
-            )
-    width, height = label + 54 * cell, len(years) * year_h
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}">{"".join(parts)}</svg>'
-    )
-
-
 # Rough number of days of disk left
 write(
     f"{ARCHIVE}/free.txt", f"{int(shutil.disk_usage('/').free / (2 * 90e9 / 7))} days"
 )
 
 for type_, cfg in sorted(TYPES.items()):
-    print(f"Type: {type_}")
+    msg(f"Type: <green>{type_}<none>\n")
     base = f"{ARCHIVE}/{type_}"
     recent = None
     if "keep_days" in cfg:
         recent = (NOW - timedelta(days=cfg["keep_days"])).strftime("%Y%m%d")
 
     size = human_bytes(dir_size(base))
-    print(f"Save {type_} size ({size}) to {base}/total-bytes.txt")
+    msg(
+        f"Save <yellow>{type_}<none> size (<green>{size}<none>) to <cyan>{base}/total-bytes.txt<none>\n"
+    )
     write(f"{base}/total-bytes.txt", size)
 
     rows = []
@@ -115,7 +82,7 @@ for type_, cfg in sorted(TYPES.items()):
         if not os.path.exists(dayfile) and iso < TODAY:
             zips = sorted(glob.glob(f"{daydir}/*.zip"))
             if zips:
-                print(f"Create zip archive for {y}-{m}-{d}")
+                msg(f"Create zip archive for <green>{y}-{m}-{d}<none>\n")
                 with zipfile.ZipFile(dayfile, "w", zipfile.ZIP_STORED) as z:
                     for f in zips:
                         z.write(f, os.path.basename(f))
@@ -124,7 +91,7 @@ for type_, cfg in sorted(TYPES.items()):
         matches = glob.glob(pattern)
         count = len(matches)
         if count and recent and iso < recent:
-            print(f"Removing {pattern} ({count})")
+            msg(f"Removing {pattern} ({count})\n")
             for f in matches:
                 os.remove(f)
 
@@ -161,5 +128,8 @@ for type_, cfg in sorted(TYPES.items()):
         }
         for key, tooltip in charts.items():
             path = os.path.join(WEBDIR, f"{type_}-{key}.svg")
-            print(f"Save SVG {path}")
-            write(path, calendar_svg(rows, key, tooltip))
+            msg(f"Save SVG <cyan>{path}<none>\n")
+            write(
+                path,
+                calendar_chart(rows, "date", key, tooltip=tooltip, order="reverse"),
+            )
