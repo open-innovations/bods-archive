@@ -1,6 +1,6 @@
 #!/bin/bash
 v=0
-types=("gtfsrt" "sirivm")
+types=("gtfsrt")
 urls=("https://data.bus-data.dft.gov.uk/avl/download/gtfsrt" "https://data.bus-data.dft.gov.uk/avl/download/bulk_archive")
 length=${#types[@]}
 while [ $v -lt 2 ];
